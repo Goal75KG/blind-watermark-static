@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="在浏览器本地嵌入或提取 Blind Watermark 文字与图案水印。">
+  <title>图片盲水印</title>
+  <link rel="stylesheet" href="./style.css">
+  <script src="./app.js" defer></script>
+</head>
+<body>
+  <header class="topbar">
+    <div class="container topbar-inner">
+      <a class="brand" href="./"><span class="brand-icon" aria-hidden="true"></span>Blind Watermark</a>
+      <span class="local-tag"><span aria-hidden="true"></span>浏览器本地处理</span>
+    </div>
+  </header>
+
+  <main class="container">
+    <div class="intro">
+      <h1>图片盲水印</h1>
+      <p>把文字或图案藏进图片里。提取只需含水印的图片和原始参数，文件不会上传。</p>
+    </div>
+
+    <div class="workspace">
+      <form id="job-form" class="card form-card">
+        <div class="segment" role="group" aria-label="水印操作">
+          <button type="button" data-operation="embed" aria-pressed="true">嵌入水印</button>
+          <button type="button" data-operation="extract" aria-pressed="false">提取水印</button>
+        </div>
+
+        <div class="form-section">
+          <h2 id="source-title">原始图片</h2>
+          <input id="source-file" type="file" accept="image/png,image/jpeg,image/bmp,.png,.jpg,.jpeg,.bmp" hidden>
+          <button type="button" id="drop-zone" class="drop-zone" aria-labelledby="drop-label" aria-describedby="file-hint">
+            <span class="upload-icon" aria-hidden="true">+</span>
+            <img id="source-preview" alt="所选图片预览" hidden>
+            <span id="drop-label">点击选择或拖放图片</span>
+            <span id="file-hint">PNG、JPEG、BMP · 最大 30 MB / 1200 万像素</span>
+          </button>
+        </div>
+
+        <div class="form-section">
+          <div class="field-row">
+            <h2>水印内容</h2>
+            <div class="choices" role="group" aria-label="水印类型">
+              <label><input type="radio" name="kind" value="text" checked><span>文字</span></label>
+              <label><input type="radio" name="kind" value="image"><span>图案</span></label>
+            </div>
+          </div>
+          <div data-fields="embed-text">
+            <label for="mark-text" class="sr-only">水印文字</label>
+            <textarea id="mark-text" rows="3" placeholder="输入要嵌入的文字" maxlength="5000"></textarea>
+            <p class="hint" id="text-length">嵌入后请保存提取参数。</p>
+          </div>
+          <div data-fields="embed-image" hidden>
+            <label for="mark-file" class="sr-only">选择图案水印文件</label>
+            <input id="mark-file" class="file-input" type="file" accept="image/png,image/jpeg,image/bmp,.png,.jpg,.jpeg,.bmp">
+            <p class="hint">使用黑白小图。原版算法会把图案转换为黑白位图。</p>
+          </div>
+          <div data-fields="extract-text" hidden>
+            <label class="field" for="bit-count">水印位数
+              <input id="bit-count" type="number" inputmode="numeric" min="1" max="187500" step="1" placeholder="输入嵌入时的位数">
+            </label>
+            <p class="hint">填入原版 Python 提供的 <code>wm_shape</code> 位数。</p>
+          </div>
+          <div data-fields="extract-image" hidden>
+            <div class="field-grid">
+              <label class="field" for="mark-width">原图案宽度（px）<input id="mark-width" type="number" inputmode="numeric" min="1" max="187500" step="1"></label>
+              <label class="field" for="mark-height">原图案高度（px）<input id="mark-height" type="number" inputmode="numeric" min="1" max="187500" step="1"></label>
+            </div>
+          </div>
+        </div>
+
+        <details class="settings" id="advanced">
+          <summary>算法参数 <span id="settings-summary">常规 · 密码 1 / 1</span></summary>
+          <div class="field-grid">
+            <label class="field" for="password-wm">水印密码 <code>password_wm</code><input id="password-wm" type="number" inputmode="numeric" min="0" max="4294967295" step="1" value="1"></label>
+            <label class="field" for="password-img">图片密码 <code>password_img</code><input id="password-img" type="number" inputmode="numeric" min="0" max="4294967295" step="1" value="1"></label>
+          </div>
+          <label class="checkbox" for="fast-mode"><input type="checkbox" id="fast-mode"> 快速模式 <code>fast_mode</code></label>
+          <p class="hint">提取时需使用与嵌入时相同的密码和模式。</p>
+        </details>
+
+        <button id="run" class="button primary" type="submit">嵌入水印</button>
+        <p class="error" id="error" role="alert" hidden></p>
+      </form>
+
+      <section class="card result-card" aria-labelledby="result-heading">
+        <div class="result-title"><h2 id="result-heading">处理结果</h2><span id="result-format" class="format" hidden></span></div>
+        <div id="result-stage" class="result-stage" aria-busy="false">
+          <div id="result-placeholder" class="placeholder">
+            <span class="preview-icon" aria-hidden="true"></span>
+            <p id="status" role="status" aria-live="polite">嵌入后的图片会显示在这里</p>
+          </div>
+          <img id="result-image" alt="水印处理结果" hidden>
+          <pre id="result-text" tabindex="0" hidden></pre>
+        </div>
+        <div id="result-meta" class="result-meta" hidden>
+          <h3>提取参数</h3>
+          <dl id="result-params"></dl>
+        </div>
+        <div id="result-actions" class="result-actions" hidden>
+          <a class="button primary" id="download-image" hidden>下载 PNG</a>
+          <a class="button secondary" id="download-params" hidden>保存提取参数</a>
+          <a class="button primary" id="download-text" hidden>下载文字</a>
+        </div>
+        <p id="result-hint" class="hint" hidden></p>
+      </section>
+    </div>
+  </main>
+
+  <footer class="container footer"><span>算法版本 0.4.4</span><a href="https://github.com/guofei9987/blind_watermark" target="_blank" rel="noopener noreferrer">GitHub 原项目</a></footer>
+</body>
+</html>
